@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
 import prisma from '@/lib/prisma';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure cloudinary explicitly without assuming CLOUDINARY_URL format works fully automatically in all nextjs environments
+cloudinary.config({
+    cloud_name: 'dfmo2iznu',
+    api_key: '285625431479728',
+    api_secret: 'GUPrf3PhddoOhjTUYnnRKL4Zq5k',
+    secure: true,
+});
 
 export async function GET() {
     try {
@@ -21,21 +27,24 @@ export async function POST(req) {
         const price = formData.get('price');
         const images = formData.getAll('images'); // Multiple files
 
-        const uploadsDir = path.join(process.cwd(), 'public/uploads');
-        if (!existsSync(uploadsDir)) {
-            await mkdir(uploadsDir, { recursive: true });
-        }
-
         const uploadedPaths = [];
         for (const file of images) {
             if (file && typeof file !== 'string') {
                 const bytes = await file.arrayBuffer();
                 const buffer = Buffer.from(bytes);
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                const filename = `${uniqueSuffix}-${file.name.replace(/\\s+/g, '_')}`;
-                const filepath = path.join(uploadsDir, filename);
-                await writeFile(filepath, buffer);
-                uploadedPaths.push(`/uploads/${filename}`);
+
+                const uploadResult = await new Promise((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                        { folder: 'akole_store_products' },
+                        (error, result) => {
+                            if (error) return reject(error);
+                            resolve(result);
+                        }
+                    );
+                    uploadStream.end(buffer);
+                });
+
+                uploadedPaths.push(uploadResult.secure_url);
             }
         }
 
