@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "cockroachdb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(sequence())
+  name        String
+  email       String   @unique
+  phoneNo     String
+  password    String
+  role        String   @default("USER")
+  orders      Order[]
+}
+
+model Product {
+  id          Int      @id @default(sequence())
+  name        String
+  description String
+  price       Float
+  imageUrls   String?
+  orders      Order[]
+}
+
+model Order {
+  id          Int      @id @default(sequence())
+  productId   Int
+  userId      Int
+  quantity    Int
+  address     String
+  contacted   Boolean  @default(false)
+  product     Product  @relation(fields: [productId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+}
